@@ -1,5 +1,4 @@
-from fastapi import FastAPI, Request, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
