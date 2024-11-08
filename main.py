@@ -156,7 +156,7 @@ async def get_user_profile(current_user: dict = Depends(get_current_user)):
 
 # Health check endpoint
 @app.get("/health")
-async def health_check(current_user: dict = Depends(get_current_user)):
+async def health_check():
     return {"status": "healthy"}
 
 @app.get("/home")
