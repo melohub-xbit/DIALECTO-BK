@@ -107,7 +107,7 @@ def generate_language_content_gemini(language: str, level: str) -> dict:
     response = model.generate_content(prompt)
     return json.loads(response.text)
 
-@app.post("/api/login")
+@app.post("/login")
 async def login(user_data: UserLogin):
     user = users_collection.find_one({"username": user_data.username})
     if user and pwd_context.verify(user_data.password, user["password"]):
@@ -125,7 +125,7 @@ async def login(user_data: UserLogin):
         detail="Invalid credentials"
     )
 
-@app.post("/api/register")
+@app.post("/register")
 async def register(user_data: UserRegister):
     existing_user = users_collection.find_one({"username": user_data.username})
     if existing_user:
@@ -145,7 +145,7 @@ async def register(user_data: UserRegister):
         "message": "Registration successful"
     }
 
-@app.get("/api/user/profile")
+@app.get("/user/profile")
 async def get_user_profile(current_user: dict = Depends(get_current_user)):
     return {
         "username": current_user["username"],
@@ -155,11 +155,11 @@ async def get_user_profile(current_user: dict = Depends(get_current_user)):
     }
 
 # Health check endpoint
-@app.get("/api/health")
+@app.get("/health")
 async def health_check(current_user: dict = Depends(get_current_user)):
     return {"status": "healthy"}
 
-@app.get("/api/home")
+@app.get("/home")
 async def home(current_user: dict = Depends(get_current_user)):
     return {
         "current_user": {
@@ -168,7 +168,7 @@ async def home(current_user: dict = Depends(get_current_user)):
         }
     }
 
-@app.get("/api/home/leaderboard")
+@app.get("/home/leaderboard")
 async def leaderboard(language: str = "SPANISH", current_user: dict = Depends(get_current_user)):
     # Find users who have points in the specified language
     pipeline = [
@@ -192,7 +192,7 @@ async def leaderboard(language: str = "SPANISH", current_user: dict = Depends(ge
     }
 
 
-@app.get("/api/home/flashcards")
+@app.get("/home/flashcards")
 async def flashcards(language: str="SPANISH", current_user: dict = Depends(get_current_user)):
     user_points = current_user["languages"].get(language.upper(), 0)
     level = determine_user_level(user_points)
