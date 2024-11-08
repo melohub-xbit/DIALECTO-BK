@@ -81,7 +81,7 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-jose==3.3.0
 python-multipart==0.0.17
-pywin32==308
+pywin32==306
 PyYAML==6.0.2
 pyzmq==26.2.0
 referencing==0.35.1
