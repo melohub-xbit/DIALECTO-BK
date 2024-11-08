@@ -17,7 +17,7 @@ app = FastAPI()
 # Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -209,6 +209,14 @@ async def flashcards(info_dict: dict):
     
     return {
         "flashcards": flashcards_data
+    }
+
+@app.get("/llm")
+async def llm_test():
+    response = model.generate_content("Hello, how are you today?")
+    return {
+        "status": "success",
+        "message": response.text
     }
 
 @app.post("/home/flashcards/updatescore")
