@@ -128,14 +128,7 @@ async def health_check():
 
 @app.get("/api/home")
 async def home(current_user: dict = Depends(get_current_user)):
-    all_users = list(users_collection.find({}, {
-        "_id": 0, 
-        "username": 1, 
-        "languages": 1
-    }))
-    
     return {
-        "all_users": all_users,
         "current_user": {
             "username": current_user["username"],
             "languages": current_user["languages"]
