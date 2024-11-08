@@ -149,7 +149,7 @@ async def register(user_data: UserRegister):
         "access_token": access_token,
     }
 
-@app.get("/user/profile")
+@app.get("/profile")
 async def get_user_profile(current_user: dict = Depends(get_current_user)):
     return {
         "username": current_user["username"],
@@ -172,7 +172,7 @@ async def home(current_user: dict = Depends(get_current_user)):
         }
     }
 
-@app.post("/home/leaderboard")
+@app.post("/leaderboard")
 async def leaderboard(lang_dict: dict):
     language = lang_dict["language"].upper()
 
@@ -198,7 +198,7 @@ async def leaderboard(lang_dict: dict):
     }
 
 
-@app.post("/home/flashcards")
+@app.post("/flashcards")
 async def flashcards(info_dict: dict):
     language = info_dict["language"].upper()
     current_user = info_dict["username"]
@@ -219,7 +219,7 @@ async def llm_test():
         "message": response.text
     }
 
-@app.post("/home/flashcards/updatescore")
+@app.post("/updatescore")
 async def update_score(info_dict: dict):
     language = info_dict["language"].upper()
     score = info_dict["score"]
