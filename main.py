@@ -117,6 +117,7 @@ async def login(user_data: UserLogin):
             "status": "success",
             "username": user_data.username,
             "languages": user["languages"],
+            "access_token": access_token,
         }
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -131,7 +132,9 @@ async def register(user_data: UserRegister):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already exists"
         )
-    
+    access_token = create_access_token(
+        data={"sub": user_data.username}
+    )
     hashed_password = pwd_context.hash(user_data.password)
     users_collection.insert_one({
         "username": user_data.username,
@@ -142,7 +145,8 @@ async def register(user_data: UserRegister):
         "status": "success",
         "message": "Registration successful",
         "username": user_data.username,
-        "languages": users_collection.find_one({"username": user_data.username})["languages"]
+        "languages": users_collection.find_one({"username": user_data.username})["languages"],
+        "access_token": access_token,
     }
 
 @app.get("/user/profile")
