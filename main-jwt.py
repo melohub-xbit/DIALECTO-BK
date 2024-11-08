@@ -38,6 +38,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 class UserLogin(BaseModel):
     username: str
     password: str
+    languages: dict
 
 class UserRegister(BaseModel):
     username: str
@@ -103,7 +104,8 @@ async def register(user_data: UserRegister):
     hashed_password = pwd_context.hash(user_data.password)
     users_collection.insert_one({
         "username": user_data.username,
-        "password": hashed_password
+        "password": hashed_password,
+        "languages": {"SPANISH":0, "FRENCH":0, "GERMAN":0, "ITALIAN":0, "GUJARATI":0, "TELUGU":0, "JAPANESE":0},
     })
     return {
         "status": "success",
@@ -114,6 +116,8 @@ async def register(user_data: UserRegister):
 async def get_user_profile(current_user: dict = Depends(get_current_user)):
     return {
         "username": current_user["username"],
+        "rank": current_user["rank"],
+        "points": current_user["points"],
         "message": "Profile retrieved successfully"
     }
 
@@ -121,6 +125,62 @@ async def get_user_profile(current_user: dict = Depends(get_current_user)):
 @app.get("/api/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.get("/api/home")
+async def home(current_user: dict = Depends(get_current_user)):
+    all_users = list(users_collection.find({}, {
+        "_id": 0, 
+        "username": 1, 
+        "languages": 1
+    }))
+    
+    return {
+        "all_users": all_users,
+        "current_user": {
+            "username": current_user["username"],
+            "languages": current_user["languages"]
+        }
+    }
+
+@app.get("/api/home/leaderboard")
+async def leaderboard(language: str = "SPANISH"):
+    # Find users who have points in the specified language
+    pipeline = [
+        {"$match": {f"languages.{language}": {"$exists": True}}},
+        {"$project": {
+            "_id": 0,
+            "username": 1,
+            "points": f"$languages.{language}"
+        }},
+        {"$sort": {"points": -1}},
+        {"$addFields": {
+            "rank": {"$add": [{"$indexOfArray": ["$points", "$points"]}, 1]}
+        }}
+    ]
+    
+    leaderboard_users = list(users_collection.aggregate(pipeline))
+    
+    return {
+        "language": language,
+        "leaderboard": leaderboard_users
+    }
+
+
+@app.get("/api/home/flashcards")
+async def flashcards():
+    #returning structured data 10 flashcards in a dictionary of new word, english, meaning, example
+
+    #get all words from the llm in a structured format
+    #return the data
+    return {"flashcards": [
+        {
+            "new_word": "apple",
+            "english": "apple",
+            "meaning": "a round fruit with red or green skin and a white inside",
+            "example": "I like to eat apples."
+        }
+    ]
+    }
 
 if __name__ == "__main__":
     import uvicorn
