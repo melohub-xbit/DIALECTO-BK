@@ -61,13 +61,6 @@ def create_access_token(data: dict):
     return encoded_jwt
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
-    blacklist_collection = db["token_blacklist"]
-    if blacklist_collection.find_one({"token": token}):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has been invalidated",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -225,21 +218,12 @@ async def update_score(info_dict: dict, current_user: dict = Depends(get_current
 
 #logout endpoint
 @app.post("/logout")
-async def logout(token: str = Depends(oauth2_scheme), current_user: dict = Depends(get_current_user)):
-    # Add token to a blacklist in MongoDB
-    blacklist_collection = db["token_blacklist"]
-    blacklist_collection.insert_one({
-        "token": token,
-        "expiry": datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    })
-    
+async def logout():
     return {
         "status": "success",
         "message": "Logout successful",
         "clear_data": True
     }
-
-
 
 
 if __name__ == "__main__":
