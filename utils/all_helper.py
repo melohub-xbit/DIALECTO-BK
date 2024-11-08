@@ -156,6 +156,16 @@ async def save_part_narration(user_id: str, transcription: str) -> dict:
         raise ValueError("No active story found")
     
     current_part = active_story["current_part"]
+    
+    # Handle the case when all parts are completed
+    if current_part > 5:
+        final_feedback = generate_final_feedback(active_story)
+        storydb.active_stories.delete_one({"user_id": user_id})
+        return {
+            "status": "completed",
+            "final_feedback": final_feedback
+        }
+
     original_part = active_story["parts"][current_part - 1]
     
     feedback = evaluate_user_narration(
@@ -170,17 +180,18 @@ async def save_part_narration(user_id: str, transcription: str) -> dict:
         "feedback": feedback
     }
     
-    storydb.active_stories.update_one(
-        {"user_id": user_id},
-        {
-            "$set": {
-                f"parts.{current_part - 1}.user_narration": narration_data,
-                "current_part": min(current_part + 1, 5)
-            }
+    next_part = current_part + 1
+    update_data = {
+        "$set": {
+            f"parts.{current_part - 1}.user_narration": narration_data,
+            "current_part": next_part
         }
-    )
+    }
     
-    if current_part == 6:
+    storydb.active_stories.update_one({"user_id": user_id}, update_data)
+    
+    # If we've just completed part 5, return completed status
+    if next_part > 5:
         final_feedback = generate_final_feedback(active_story)
         storydb.active_stories.delete_one({"user_id": user_id})
         return {
@@ -188,11 +199,13 @@ async def save_part_narration(user_id: str, transcription: str) -> dict:
             "final_feedback": final_feedback
         }
     
+    # Return the next part if story is still in progress
     return {
         "status": "in_progress",
-        "next_part": active_story["parts"][current_part],
+        "next_part": active_story["parts"][next_part - 1],
         "current_feedback": feedback
     }
+
 
 def generate_final_feedback(story: dict) -> dict:
     all_parts = [part for part in story["parts"] if part.get("user_narration")]
@@ -209,4 +222,9 @@ def generate_final_feedback(story: dict) -> dict:
     }}"""
     
     response = model.generate_content(prompt)
-    return json.loads(response.text.strip())
+    print(response.text)
+    cleaned_text = response.text.strip()
+    cleaned_text = cleaned_text.replace('```\n', '').replace('\n```', '')
+    cleaned_text = ''.join(line.strip() for line in cleaned_text.splitlines())
+    
+    return json.loads(cleaned_text)
