@@ -173,7 +173,7 @@ async def home(current_user: dict = Depends(get_current_user)):
     }
 
 @app.post("/home/leaderboard")
-async def leaderboard(lang_dict: dict, current_user: dict = Depends(get_current_user)):
+async def leaderboard(lang_dict: dict):
     language = lang_dict["language"].upper()
 
     # Find users who have points in the specified language
@@ -199,9 +199,11 @@ async def leaderboard(lang_dict: dict, current_user: dict = Depends(get_current_
 
 
 @app.post("/home/flashcards")
-async def flashcards(lang_dict: dict, current_user: dict = Depends(get_current_user)):
-    language = lang_dict["language"].upper()
-    user_points = current_user["languages"].get(language.upper(), 0)
+async def flashcards(info_dict: dict):
+    language = info_dict["language"].upper()
+    current_user = info_dict["username"]
+    #get points of the user with the current_user username for language from the database
+    user_points = users_collection.find_one({"username": current_user})["languages"][language]
     level = determine_user_level(user_points)
     flashcards_data = generate_language_content_gemini(language, level)
     
@@ -210,12 +212,13 @@ async def flashcards(lang_dict: dict, current_user: dict = Depends(get_current_u
     }
 
 @app.post("/home/flashcards/updatescore")
-async def update_score(info_dict: dict, current_user: dict = Depends(get_current_user)):
+async def update_score(info_dict: dict):
     language = info_dict["language"].upper()
     score = info_dict["score"]
+    current_user = info_dict["username"]
     #update the current user's points in the database
     users_collection.update_one(
-        {"username": current_user["username"]},
+        {"username": current_user},
         {"$inc": {f"languages.{language}": score}}
     )
 
