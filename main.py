@@ -211,6 +211,19 @@ async def flashcards(info_dict: dict):
         "flashcards": flashcards_data
     }
 
+@app.post("/cards")
+async def cards(language: str = "SPANISH"):
+    # language = info_dict["language"].upper()
+    # current_user = info_dict["username"]
+    # #get points of the user with the current_user username for language from the database
+    # user_points = users_collection.find_one({"username": current_user})["languages"][language]
+    level = 0
+    flashcards_data = generate_language_content_gemini(language, level)
+    
+    return {
+        "flashcards": flashcards_data
+    }
+
 @app.get("/llm")
 async def llm_test():
     response = model.generate_content("Hello, how are you today?")
