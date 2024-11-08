@@ -44,7 +44,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 class UserLogin(BaseModel):
     username: str
     password: str
-    languages: dict
 
 class UserRegister(BaseModel):
     username: str
@@ -143,6 +142,7 @@ async def register(user_data: UserRegister):
     hashed_password = pwd_context.hash(user_data.password)
     users_collection.insert_one({
         "username": user_data.username,
+        "password": hashed_password,
         "languages": {"SPANISH":0, "FRENCH":0, "GERMAN":0, "ITALIAN":0, "GUJARATI":0, "TELUGU":0, "JAPANESE":0},
     })
     return {
