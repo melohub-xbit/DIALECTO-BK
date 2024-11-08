@@ -62,6 +62,13 @@ def create_access_token(data: dict):
     return encoded_jwt
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
+    blacklist_collection = db["token_blacklist"]
+    if blacklist_collection.find_one({"token": token}):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been invalidated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -116,9 +123,8 @@ async def login(user_data: UserLogin):
         )
         return {
             "status": "success",
-            "access_token": access_token,
-            "token_type": "bearer",
-            "username": user_data.username
+            "username": user_data.username,
+            "languages": user["languages"],
         }
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -137,7 +143,6 @@ async def register(user_data: UserRegister):
     hashed_password = pwd_context.hash(user_data.password)
     users_collection.insert_one({
         "username": user_data.username,
-        "password": hashed_password,
         "languages": {"SPANISH":0, "FRENCH":0, "GERMAN":0, "ITALIAN":0, "GUJARATI":0, "TELUGU":0, "JAPANESE":0},
     })
     return {
@@ -204,6 +209,25 @@ async def flashcards(language: str="SPANISH", current_user: dict = Depends(get_c
         "points": user_points,
         "flashcards": flashcards_data
     }
+
+#logout endpoint
+@app.post("/logout")
+async def logout(token: str = Depends(oauth2_scheme), current_user: dict = Depends(get_current_user)):
+    # Add token to a blacklist in MongoDB
+    blacklist_collection = db["token_blacklist"]
+    blacklist_collection.insert_one({
+        "token": token,
+        "expiry": datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    })
+    
+    return {
+        "status": "success",
+        "message": "Logout successful",
+        "clear_data": True
+    }
+
+
+
 
 if __name__ == "__main__":
     import uvicorn
