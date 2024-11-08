@@ -9,6 +9,8 @@ import dotenv
 import os
 from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordBearer
+import google.generativeai as genai
+import json
 
 app = FastAPI()
 
@@ -27,6 +29,10 @@ uri = os.getenv('MONGO_URI')
 client = MongoClient(uri, server_api=ServerApi('1'))
 db = client["auth_db"]
 users_collection = db["users"]
+
+#gemini model
+genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
+model = genai.GenerativeModel('gemini-pro')
 
 # Security configurations
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -73,6 +79,33 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     if user is None:
         raise credentials_exception
     return user
+
+#determine level
+def determine_user_level(points: int) -> str:
+    if points < 100:
+        return "beginner"
+    elif points < 300:
+        return "intermediate"
+    else:
+        return "advanced"
+
+#generating flashcards
+def generate_language_content_gemini(language: str, level: str) -> dict:
+    prompt = f"""Generate 10 flashcards for {language} language learning at {level} level.
+    Return only a JSON array with this exact structure:
+    {{
+        "cards": [
+            {{
+                "new_concept": "concept in {language}",
+                "english": "english translation",
+                "meaning": "detailed explanation",
+                "example": "example sentence in {language}"
+            }}
+        ]
+    }}"""
+    
+    response = model.generate_content(prompt)
+    return json.loads(response.text)
 
 @app.post("/api/login")
 async def login(user_data: UserLogin):
@@ -123,7 +156,7 @@ async def get_user_profile(current_user: dict = Depends(get_current_user)):
 
 # Health check endpoint
 @app.get("/api/health")
-async def health_check():
+async def health_check(current_user: dict = Depends(get_current_user)):
     return {"status": "healthy"}
 
 @app.get("/api/home")
@@ -136,7 +169,7 @@ async def home(current_user: dict = Depends(get_current_user)):
     }
 
 @app.get("/api/home/leaderboard")
-async def leaderboard(language: str = "SPANISH"):
+async def leaderboard(language: str = "SPANISH", current_user: dict = Depends(get_current_user)):
     # Find users who have points in the specified language
     pipeline = [
         {"$match": {f"languages.{language}": {"$exists": True}}},
@@ -160,19 +193,16 @@ async def leaderboard(language: str = "SPANISH"):
 
 
 @app.get("/api/home/flashcards")
-async def flashcards():
-    #returning structured data 10 flashcards in a dictionary of new word, english, meaning, example
-
-    #get all words from the llm in a structured format
-    #return the data
-    return {"flashcards": [
-        {
-            "new_word": "apple",
-            "english": "apple",
-            "meaning": "a round fruit with red or green skin and a white inside",
-            "example": "I like to eat apples."
-        }
-    ]
+async def flashcards(language: str="SPANISH", current_user: dict = Depends(get_current_user)):
+    user_points = current_user["languages"].get(language.upper(), 0)
+    level = determine_user_level(user_points)
+    flashcards_data = generate_language_content_gemini(language, level)
+    
+    return {
+        "language": language,
+        "level": level,
+        "points": user_points,
+        "flashcards": flashcards_data
     }
 
 if __name__ == "__main__":
