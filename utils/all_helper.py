@@ -93,11 +93,34 @@ def generate_stories(language: str, level: str) -> dict:
     
     return json.loads(cleaned_text)
 
+#generate word pairs for memory game
+def generate_memory_pairs(language: str, level: str) -> dict:
+    prompt = f"""Generate 10 word/phrase pairs for a memory matching game in {language} at {level} level so that the user is able to learn some good, effective things to say in that language.
+    Return only a JSON object with this exact structure:
+    {{
+        "pairs": [
+            [
+                "word/phrase in {language}",
+                "english translation"
+            ],
+            ... (repeat for all 10 pairs)
+        ]
+    }}
+    Make sure the words/phrases are appropriate for {level} level learners, and if you give phrases, don't make them too long. Also, make sure to give some phrases and some words."""
+    
+    response = model.generate_content(prompt)
+    cleaned_text = response.text.strip()
+    cleaned_text = cleaned_text.replace('```json\n', '').replace('\n```', '')
+    cleaned_text = ''.join(line.strip() for line in cleaned_text.splitlines())
+    
+    return json.loads(cleaned_text)
+
+
 async def generate_and_start_story(user_id: str, language: str, level: str) -> dict:
     story_data = generate_stories(language, level)
     
-    # Delete all stories in active_stories collection
-    storydb.active_stories.delete_many({})
+    # Delete all stories in active_stories collection for this user
+    storydb.active_stories.delete_many({"user_id": user_id})
     
     story_doc = {
         "user_id": user_id,
@@ -160,7 +183,7 @@ async def save_part_narration(user_id: str, transcription: str) -> dict:
     # Handle the case when all parts are completed
     if current_part > 5:
         final_feedback = generate_final_feedback(active_story)
-        storydb.active_stories.delete_one({"user_id": user_id})
+        storydb.active_stories.delete_many({"user_id": user_id})
         return {
             "status": "completed",
             "final_feedback": final_feedback
@@ -193,7 +216,7 @@ async def save_part_narration(user_id: str, transcription: str) -> dict:
     # If we've just completed part 5, return completed status
     if next_part > 5:
         final_feedback = generate_final_feedback(active_story)
-        storydb.active_stories.delete_one({"user_id": user_id})
+        storydb.active_stories.delete_many({"user_id": user_id})
         return {
             "status": "completed",
             "final_feedback": final_feedback
