@@ -7,10 +7,13 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 import dotenv
 import os
-from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordBearer
 import google.generativeai as genai
 import json
+from basemodels.allpydmodels import *
+from utils.all_helper import *
+from endpoints import auth, games, user
+from database import *
 
 app = FastAPI()
 
@@ -23,267 +26,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# MongoDB connection
-dotenv.load_dotenv()
-uri = os.getenv('MONGO_URI')
-client = MongoClient(uri, server_api=ServerApi('1'))
-db = client["auth_db"]
-users_collection = db["users"]
-
-#gemini model
-genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
-model = genai.GenerativeModel('gemini-pro')
-
-# Security configurations
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.getenv('SECRET_KEY')
-ALGORITHM = os.getenv('ALGORITHM')
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES'))
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-class UserLogin(BaseModel):
-    username: str
-    password: str
-
-class UserRegister(BaseModel):
-    username: str
-    password: str
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class InfoDict(BaseModel):
-    language: str
-    username: str
-
-class ScoreDict(BaseModel):
-    language: str
-    username: str
-    score: int
-
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    
-    user = users_collection.find_one({"username": username})
-    if user is None:
-        raise credentials_exception
-    return user
-
-#determine level
-def determine_user_level(points: int) -> str:
-    if points < 100:
-        return "beginner"
-    elif points < 300:
-        return "intermediate"
-    else:
-        return "advanced"
-
-#generating flashcards
-def generate_language_content_gemini(language: str, level: str) -> dict:
-    prompt = f"""Generate 10 flashcards for {language} language learning at {level} level.
-    Return only a JSON array with this exact structure:
-    {{
-        "cards": [
-            {{
-                "new_concept": "concept in {language}",
-                "english": "english translation",
-                "meaning": "detailed explanation",
-                "example": "example sentence in {language}"
-            }}
-        ]
-    }}"""
-    response = model.generate_content(prompt)
-    # Remove markdown formatting and clean the string
-    cleaned_text = response.text.strip()
-    cleaned_text = cleaned_text.replace('```json\n', '').replace('\n```', '')
-    # Remove any extra newlines and spaces
-    cleaned_text = ''.join(line.strip() for line in cleaned_text.splitlines())
-    
-    return json.loads(cleaned_text)
+#routers
+app.include_router(auth.router, tags=["Auth"])
+app.include_router(games.router, tags=["Games"])
+app.include_router(user.router, tags=["User"])
 
 @app.middleware("http")
 async def add_cors_header(request, call_next):
     response = await call_next(request)
     response.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
     return response
-
-@app.post("/login")
-async def login(user_data: UserLogin):
-    user = users_collection.find_one({"username": user_data.username})
-    if user and pwd_context.verify(user_data.password, user["password"]):
-        access_token = create_access_token(
-            data={"sub": user_data.username}
-        )
-        return {
-            "status": "success",
-            "username": user_data.username,
-            "languages": user["languages"],
-            "access_token": access_token,
-        }
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid credentials"
-    )
-
-@app.post("/register")
-async def register(user_data: UserRegister):
-    existing_user = users_collection.find_one({"username": user_data.username})
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already exists"
-        )
-    access_token = create_access_token(
-        data={"sub": user_data.username}
-    )
-    hashed_password = pwd_context.hash(user_data.password)
-    users_collection.insert_one({
-        "username": user_data.username,
-        "password": hashed_password,
-        "languages": {"SPANISH":0, "FRENCH":0, "GERMAN":0, "ITALIAN":0, "GUJARATI":0, "TELUGU":0, "JAPANESE":0},
-    })
-    return {
-        "status": "success",
-        "message": "Registration successful",
-        "username": user_data.username,
-        "languages": users_collection.find_one({"username": user_data.username})["languages"],
-        "access_token": access_token,
-    }
-
-# @app.get("/profile")
-# async def get_user_profile(current_user: dict = Depends(get_current_user)):
-#     return {
-#         "username": current_user["username"],
-#         "rank": current_user["rank"],
-#         "points": current_user["points"],
-#         "message": "Profile retrieved successfully"
-#     }
-
-# Health check endpoint
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
-
-# @app.get("/home")
-# async def home(current_user: dict = Depends(get_current_user)):
-#     return {
-#         "current_user": {
-#             "username": current_user["username"],
-#             "languages": current_user["languages"]
-#         }
-#     }
-
-@app.post("/leaderboard")
-async def leaderboard(info_dict: InfoDict):
-    language = info_dict.language.upper()
-
-    # Find users who have points in the specified language
-    pipeline = [
-        {"$match": {f"languages.{language}": {"$exists": True}}},
-        {"$project": {
-            "_id": 0,
-            "username": 1,
-            "points": f"$languages.{language}"
-        }},
-        {"$sort": {"points": -1}},
-        {"$group": {
-            "_id": None,
-            "users": {"$push": "$$ROOT"}
-        }},
-        {"$unwind": {"path": "$users", "includeArrayIndex": "rank"}},
-        {"$project": {
-            "_id": 0,
-            "username": "$users.username",
-            "points": "$users.points",
-            "rank": {"$add": ["$rank", 1]}
-        }}
-    ]
-    
-    leaderboard_users = list(users_collection.aggregate(pipeline))
-    
-    return {
-        "language": language,
-        "leaderboard": leaderboard_users
-    }
-
-
-@app.post("/dailies")
-async def dailies(info_dict: InfoDict):
-    language = info_dict.language.upper()
-    current_user = info_dict.username
-    #get points of the user with the current_user username for language from the database
-    user_points = users_collection.find_one({"username": current_user})["languages"][language]
-    level = determine_user_level(user_points)
-    try:
-        flashcards_data = generate_language_content_gemini(language, level)
-        return {
-            "dailies": flashcards_data
-        }
-    except:
-        print("Error generating dailies")
-    
-
-# @app.post("/cards")
-# async def cards(language: str = "SPANISH"):
-#     # language = info_dict["language"].upper()
-#     # current_user = info_dict["username"]
-#     # #get points of the user with the current_user username for language from the database
-#     # user_points = users_collection.find_one({"username": current_user})["languages"][language]
-#     level = 0
-#     flashcards_data = generate_language_content_gemini(language, level)
-    
-#     return {
-#         "dailies": flashcards_data
-#     }
-
-# @app.get("/llm")
-# async def llm_test():
-#     response = model.generate_content("Hello, how are you today?")
-#     return {
-#         "status": "success",
-#         "message": response.text
-#     }
-
-@app.post("/updatescore")
-async def update_score(info_dict: ScoreDict):
-    language = info_dict.language.upper()
-    score = info_dict.score
-    current_user = info_dict.username
-    #update the current user's points in the database
-    users_collection.update_one(
-        {"username": current_user},
-        {"$inc": {f"languages.{language}": score}}
-    )
-
-# #dummy endpoints
-# @app.post("/dummy")
-# async def dummy(info_dict: dict):
-#     #do something with the info_dict
-#     info_dict["message"] = "Dummy endpoint called"
-#     return {
-#         "status": "success",
-#         "message": "Dummy endpoint called",
-#         "data": info_dict
-#     }
 
 #logout endpoint
 @app.post("/logout")
