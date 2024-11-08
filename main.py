@@ -17,7 +17,7 @@ app = FastAPI()
 # Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "https://dialecto.onrender.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,6 +52,15 @@ class UserRegister(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class InfoDict(BaseModel):
+    language: str
+    username: str
+
+class ScoreDict(BaseModel):
+    language: str
+    username: str
+    score: int
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -102,9 +111,20 @@ def generate_language_content_gemini(language: str, level: str) -> dict:
             }}
         ]
     }}"""
-    
     response = model.generate_content(prompt)
-    return json.loads(response.text)
+    # Remove markdown formatting and clean the string
+    cleaned_text = response.text.strip()
+    cleaned_text = cleaned_text.replace('```json\n', '').replace('\n```', '')
+    # Remove any extra newlines and spaces
+    cleaned_text = ''.join(line.strip() for line in cleaned_text.splitlines())
+    
+    return json.loads(cleaned_text)
+
+@app.middleware("http")
+async def add_cors_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
+    return response
 
 @app.post("/login")
 async def login(user_data: UserLogin):
@@ -149,32 +169,32 @@ async def register(user_data: UserRegister):
         "access_token": access_token,
     }
 
-@app.get("/profile")
-async def get_user_profile(current_user: dict = Depends(get_current_user)):
-    return {
-        "username": current_user["username"],
-        "rank": current_user["rank"],
-        "points": current_user["points"],
-        "message": "Profile retrieved successfully"
-    }
+# @app.get("/profile")
+# async def get_user_profile(current_user: dict = Depends(get_current_user)):
+#     return {
+#         "username": current_user["username"],
+#         "rank": current_user["rank"],
+#         "points": current_user["points"],
+#         "message": "Profile retrieved successfully"
+#     }
 
 # Health check endpoint
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
-@app.get("/home")
-async def home(current_user: dict = Depends(get_current_user)):
-    return {
-        "current_user": {
-            "username": current_user["username"],
-            "languages": current_user["languages"]
-        }
-    }
+# @app.get("/home")
+# async def home(current_user: dict = Depends(get_current_user)):
+#     return {
+#         "current_user": {
+#             "username": current_user["username"],
+#             "languages": current_user["languages"]
+#         }
+#     }
 
 @app.post("/leaderboard")
-async def leaderboard(lang_dict: dict):
-    language = lang_dict["language"].upper()
+async def leaderboard(info_dict: InfoDict):
+    language = info_dict.language.upper()
 
     # Find users who have points in the specified language
     pipeline = [
@@ -185,8 +205,16 @@ async def leaderboard(lang_dict: dict):
             "points": f"$languages.{language}"
         }},
         {"$sort": {"points": -1}},
-        {"$addFields": {
-            "rank": {"$add": [{"$indexOfArray": ["$points", "$points"]}, 1]}
+        {"$group": {
+            "_id": None,
+            "users": {"$push": "$$ROOT"}
+        }},
+        {"$unwind": {"path": "$users", "includeArrayIndex": "rank"}},
+        {"$project": {
+            "_id": 0,
+            "username": "$users.username",
+            "points": "$users.points",
+            "rank": {"$add": ["$rank", 1]}
         }}
     ]
     
@@ -198,51 +226,64 @@ async def leaderboard(lang_dict: dict):
     }
 
 
-@app.post("/flashcards")
-async def flashcards(info_dict: dict):
-    language = info_dict["language"].upper()
-    current_user = info_dict["username"]
+@app.post("/dailies")
+async def dailies(info_dict: InfoDict):
+    language = info_dict.language.upper()
+    current_user = info_dict.username
     #get points of the user with the current_user username for language from the database
     user_points = users_collection.find_one({"username": current_user})["languages"][language]
     level = determine_user_level(user_points)
-    flashcards_data = generate_language_content_gemini(language, level)
+    try:
+        flashcards_data = generate_language_content_gemini(language, level)
+        return {
+            "dailies": flashcards_data
+        }
+    except:
+        print("Error generating dailies")
     
-    return {
-        "flashcards": flashcards_data
-    }
 
-@app.post("/cards")
-async def cards(language: str = "SPANISH"):
-    # language = info_dict["language"].upper()
-    # current_user = info_dict["username"]
-    # #get points of the user with the current_user username for language from the database
-    # user_points = users_collection.find_one({"username": current_user})["languages"][language]
-    level = 0
-    flashcards_data = generate_language_content_gemini(language, level)
+# @app.post("/cards")
+# async def cards(language: str = "SPANISH"):
+#     # language = info_dict["language"].upper()
+#     # current_user = info_dict["username"]
+#     # #get points of the user with the current_user username for language from the database
+#     # user_points = users_collection.find_one({"username": current_user})["languages"][language]
+#     level = 0
+#     flashcards_data = generate_language_content_gemini(language, level)
     
-    return {
-        "flashcards": flashcards_data
-    }
+#     return {
+#         "dailies": flashcards_data
+#     }
 
-@app.get("/llm")
-async def llm_test():
-    response = model.generate_content("Hello, how are you today?")
-    return {
-        "status": "success",
-        "message": response.text
-    }
+# @app.get("/llm")
+# async def llm_test():
+#     response = model.generate_content("Hello, how are you today?")
+#     return {
+#         "status": "success",
+#         "message": response.text
+#     }
 
 @app.post("/updatescore")
-async def update_score(info_dict: dict):
-    language = info_dict["language"].upper()
-    score = info_dict["score"]
-    current_user = info_dict["username"]
+async def update_score(info_dict: ScoreDict):
+    language = info_dict.language.upper()
+    score = info_dict.score
+    current_user = info_dict.username
     #update the current user's points in the database
     users_collection.update_one(
         {"username": current_user},
         {"$inc": {f"languages.{language}": score}}
     )
 
+# #dummy endpoints
+# @app.post("/dummy")
+# async def dummy(info_dict: dict):
+#     #do something with the info_dict
+#     info_dict["message"] = "Dummy endpoint called"
+#     return {
+#         "status": "success",
+#         "message": "Dummy endpoint called",
+#         "data": info_dict
+#     }
 
 #logout endpoint
 @app.post("/logout")
