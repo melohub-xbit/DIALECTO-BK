@@ -147,7 +147,9 @@ async def register(user_data: UserRegister):
     })
     return {
         "status": "success",
-        "message": "Registration successful"
+        "message": "Registration successful",
+        "username": user_data.username,
+        "languages": users_collection.find_one({"username": user_data.username})["languages"]
     }
 
 @app.get("/user/profile")
