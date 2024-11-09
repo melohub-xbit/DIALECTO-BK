@@ -55,6 +55,12 @@ async def health_check():
     return {
         "status": "healthy"
     }
+#/ endpoint
+@router.get("/")
+async def basic():
+    return {
+        "status": "healthy"
+    }
 
 #logout endpoint
 @router.post("/logout")
