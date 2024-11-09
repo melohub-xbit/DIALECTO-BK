@@ -35,7 +35,7 @@ app.include_router(games_word.router, tags=["Games"])
 @app.middleware("http")
 async def add_cors_header(request, call_next):
     response = await call_next(request)
-    response.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
+    response.headers["Access-Control-Allow-Origin"] = "*"
     return response
 
 #logout endpoint
