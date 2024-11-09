@@ -78,7 +78,7 @@ def generate_memory_pairs(language: str, level: str) -> dict:
             [
                 "word/phrase in {language}",
                 "english translation",
-                "english pronunciation of the word/phrase that can be easily read in english"
+                "english pronunciation of the word/phrase."
             ],
             ... (repeat for all 10 pairs)
         ]
