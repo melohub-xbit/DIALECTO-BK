@@ -97,7 +97,7 @@ def language_teaching_chat(language: str, user_query: str) -> dict:
     {{
         "response": "small, brief explanation",
         "examples": "two small examples of usage of {user_query}",
-        "interesting facts": "two small interesting facts about {user_query}"
+        "interesting_facts": "two small interesting facts about {user_query}"
     }}
     
     Focus on providing clear explanations with practical examples."""
