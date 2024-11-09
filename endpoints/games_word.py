@@ -62,7 +62,7 @@ async def get_tongue_twisters(
 @router.post("/speech_analysis")
 async def analyze_speech(info_dict: AnalyzeSpeech):
     language = info_dict.language.upper()
-    transcript = info_dict.transcript
+    transcript = info_dict.transcription
     current_user = info_dict.username
     analysis_result = analyze_speech_transcript(language, transcript)
     
