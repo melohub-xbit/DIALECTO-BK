@@ -1,6 +1,7 @@
 from fastapi import *
 from basemodels.allpydmodels import *
 from utils.all_helper import *
+from utils.story_helper import *
 from database import *
 
 router = APIRouter()
@@ -41,38 +42,6 @@ async def leaderboard(info_dict: InfoDict):
         return{
             "language": language,
             "leaderboard": []
-        }
-
-@router.post("/dailies")
-async def dailies(info_dict: InfoDict):
-    language = info_dict.language.upper()
-    current_user = info_dict.username
-    #get points of the user with the current_user username for language from the database
-    user_points = users_collection.find_one({"username": current_user})["languages"][language]
-    level = determine_user_level(user_points)
-    try:
-        dailies_data = generate_dailies(language, level)
-        return {
-            "dailies": dailies_data
-        }
-    except:
-        print("Error generating dailies")
-
-@router.post("/memorypairs")
-async def memory_pairs(info_dict: InfoDict):
-    language = info_dict.language.upper()
-    current_user = info_dict.username
-    user_points = users_collection.find_one({"username": current_user})["languages"][language]
-    level = determine_user_level(user_points)
-    
-    try:
-        pairs_data = generate_memory_pairs(language, level)
-        return {
-            "words": pairs_data
-        }
-    except:
-        return {
-            "pairs": []
         }
 
 

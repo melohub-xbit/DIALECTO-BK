@@ -12,7 +12,8 @@ import google.generativeai as genai
 import json
 from basemodels.allpydmodels import *
 from utils.all_helper import *
-from endpoints import auth, games, user
+from utils.story_helper import *
+from endpoints import auth, games, games_word
 from database import *
 
 app = FastAPI()
@@ -20,7 +21,7 @@ app = FastAPI()
 # Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://dialecto.onrender.com"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,7 +30,7 @@ app.add_middleware(
 #routers
 app.include_router(auth.router, tags=["Auth"])
 app.include_router(games.router, tags=["Games"])
-app.include_router(user.router, tags=["User"])
+app.include_router(games_word.router, tags=["Games"])
 
 @app.middleware("http")
 async def add_cors_header(request, call_next):

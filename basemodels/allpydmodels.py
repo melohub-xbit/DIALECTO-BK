@@ -56,3 +56,15 @@ class ActiveStory(BaseModel):
     current_part: int
     completed: bool
     parts: List[StoryPart]
+
+class LanguageTeaching(BaseModel):
+    language: str
+    query: str
+
+class TongueTwister(BaseModel):
+    language: str
+
+class AnalyzeSpeech(BaseModel):
+    language: str
+    transcription: str
+    username: str
