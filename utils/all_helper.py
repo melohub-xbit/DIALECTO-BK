@@ -50,11 +50,11 @@ def generate_dailies(language: str, level: str) -> dict:
         "cards": [
             {{
                 "new_concept": "concept in {language}",
-                "concept_pronunciation": "pronunciation of the concept",
+                "concept_pronunciation": "pronunciation of the concept in english",
                 "english": "english translation",
                 "meaning": "detailed explanation",
                 "example": "example sentence in {language}",
-                "example_pronunciation": "pronunciation of the example sentence",
+                "example_pronunciation": "pronunciation of the example sentence in english",
                 "translation": "translation of the example sentence"
             }}
         ]
@@ -78,7 +78,7 @@ def generate_memory_pairs(language: str, level: str) -> dict:
             [
                 "word/phrase in {language}",
                 "english translation",
-                "english pronunciation of the word/phrase"
+                "english pronunciation of the word/phrase that can be easily read in english"
             ],
             ... (repeat for all 10 pairs)
         ]
