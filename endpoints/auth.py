@@ -49,6 +49,13 @@ async def register(user_data: UserRegister):
         "access_token": access_token,
     }
 
+#health check endpoint
+@router.get("/health")
+async def health_check():
+    return {
+        "status": "healthy"
+    }
+
 #logout endpoint
 @router.post("/logout")
 async def logout():
