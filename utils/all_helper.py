@@ -119,7 +119,6 @@ def generate_tongue_twisters(language: str) -> dict:
                 "text": "tongue twister in {language}",
                 "pronunciation": "pronunciation guide",
                 "translation": "english translation",
-                "difficulty_rating": "rating from 1-10"
             }}
         ]
     }}"""
@@ -143,7 +142,6 @@ def analyze_speech_transcript(language: str, transcript: str) -> dict:
             "2 alternative ways to express the same meaning"
         ],
         "score": "rating from 1-10 based on grammar and natural flow",
-        "improvement_notes": "brief notes on what could be improved"
     }}
     
     Focus on natural speech patterns and common expressions in {language}."""
