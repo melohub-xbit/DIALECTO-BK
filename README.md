@@ -10,9 +10,9 @@ DIALECTO-BK/
 ├── basemodels/
 │   └── allpydmodels.py
 ├── endpoints/
+│   ├── auth.py
 │   ├── games.py
-│   ├── games_word.py
-│   └── auth.py
+│   └── games_word.py
 ├── utils/
 │   ├── all_helper.py
 │   └── story_helper.py
