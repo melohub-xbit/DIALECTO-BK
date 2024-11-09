@@ -9,7 +9,14 @@
 [![Documentation](https://img.shields.io/badge/docs-API_Documentation-blue?style=for-the-badge)](https://dialecto.onrender.com/docs)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](https://makeapullrequest.com)
 
-This repository contains the backend code for Dialecto, a web application designed to help users learn new languages in a fun and engaging way. 
+A robust backend for a pixel art themed language learning app, enabling seamless user interaction, progress tracking, and data management. Built with FastAPI, and integrated with MongoDB database (via pymongo) support for storing user progress, leaderboard, and language content.
+
+## Team Details
+- **Team Name:** NetCrawlers
+- **Team Members:** 
+  - [Krishna Sai](https://github.com/melohub-xbit)
+  - [Chaitya Shah](https://github.com/CShah44)
+  - [Krish Patel](https://github.com/kodercrish)
 
 ## Project Structure
 
