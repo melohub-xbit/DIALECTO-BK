@@ -7,15 +7,15 @@ This repository contains the backend code for Dialecto, a web application design
 The project is structured as follows:
 ```
 DIALECTO-BK/
-├── utils/
-│   ├── all_helper.py
-│   └── story_helper.py
+├── basemodels/
+│   └── allpydmodels.py
 ├── endpoints/
 │   ├── games.py
 │   ├── games_word.py
 │   └── auth.py
-├── basemodels/
-│   └── allpydmodels.py
+├── utils/
+│   ├── all_helper.py
+│   └── story_helper.py
 ├── main.py
 ├── database.py
 ├── .gitignore
