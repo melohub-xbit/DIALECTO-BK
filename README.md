@@ -1,5 +1,13 @@
 # Dialecto - Language Learning App
 
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/python-3.9+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Render](https://img.shields.io/badge/Render-%46E3B7.svg?style=for-the-badge&logo=render&logoColor=white)](https://dialecto.onrender.com)
+[![Vercel](https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white)](https://dialecto-nine.vercel.app/)
+[![Documentation](https://img.shields.io/badge/docs-API_Documentation-blue?style=for-the-badge)](https://dialecto.onrender.com/docs)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](https://makeapullrequest.com)
+
 This repository contains the backend code for Dialecto, a web application designed to help users learn new languages in a fun and engaging way. 
 
 ## Project Structure
