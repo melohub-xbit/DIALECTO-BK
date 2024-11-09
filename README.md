@@ -70,6 +70,11 @@ Dialecto offers a variety of features to help users learn new languages:
     - **Tongue Twister Generator:** Practice your pronunciation with tongue twisters.
     - **Grammar Buddy:** Get help with grammar and correct your sentences.
 
+## Demo
+
+https://youtu.be/celR6rwV5z8
+
+
 ## Deployment
 
 - **Backend:** Deployed on Render at [https://dialecto.onrender.com](https://dialecto.onrender.com).
